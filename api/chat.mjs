@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // 1. Only allow POST requests to prevent random browser access
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -6,7 +7,7 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
 
-    // NVIDIA NIMs use the OpenAI-compatible chat completions format
+    // 2. Call NVIDIA NIM API
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -14,7 +15,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'nvidia/autogen-72b', // Updated to the Autogen-72 model identifier
+        model: 'nvidia/autogen-72b', 
         messages: [
           { 
             role: 'system', 
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
           },
           ...messages
         ],
-        temperature: 0.6, // Slightly lower for more consistent professional responses
+        temperature: 0.6,
         max_tokens: 1024,
       })
     });
@@ -30,14 +31,11 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (data.error) {
-      console.error('NVIDIA API Error:', data.error);
       return res.status(500).json({ error: data.error.message });
     }
 
-    // Extract the message content from the NVIDIA/OpenAI response structure
+    // 3. Extract response and format it for the frontend
     const reply = data.choices[0].message.content;
-    
-    // We wrap this in an array to match the frontend expectation: { content: [{ text: '...' }] }
     return res.status(200).json({ content: [{ text: reply }] });
 
   } catch (error) {
